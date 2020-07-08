@@ -72,7 +72,7 @@ function _M.access(conf, ctx)
     end
 
     local ip = ctx.var[conf.key] or ""
-    local ip_matcher = create_ip_matcher(conf.whitelist)
+    local ip_matcher = create_ip_matcher(conf.whitelist or {})
     if ip_matcher then
         local ok = ip_matcher:match(ip)
         if ok == true then
@@ -135,7 +135,7 @@ function _M.log(conf, ctx)
     end
 
     local ip = ctx.var[conf.key] or ""
-    local ip_matcher = create_ip_matcher(conf.whitelist)
+    local ip_matcher = create_ip_matcher(conf.whitelist or {})
     if ip_matcher then
         local ok = ip_matcher:match(ip)
         if ok == true then
