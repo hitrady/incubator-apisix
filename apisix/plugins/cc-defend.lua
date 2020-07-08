@@ -41,6 +41,14 @@ local _M = {
     schema = schema,
 }
 
+function _M.check_schema(conf)
+    local ok, err = core.schema.check(schema, conf)
+    if not ok then
+        return false, err
+    end
+    return true
+end
+
 function _M.access(conf, ctx)
     if conf.switch ~= "on" then
         return
