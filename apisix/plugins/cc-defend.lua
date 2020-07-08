@@ -96,6 +96,7 @@ function _M.access(conf, ctx)
             _log.attackContent = ip
             _log.attackAction = "deny"
             _log.rulesId = "30100000"
+            ctx.waf_log = ctx.waf_log or {}
             table.insert(ctx.waf_log, _log)
         else
             ctx.isCC = true
@@ -115,6 +116,7 @@ function _M.access(conf, ctx)
                     _log.attackContent = ip
                     _log.attackAction = "deny"
                     _log.rulesId = "30100000"
+                    ctx.waf_log = ctx.waf_log or {}
                     table.insert(ctx.waf_log, _log)
                 else
                     ctx.isCC = true
