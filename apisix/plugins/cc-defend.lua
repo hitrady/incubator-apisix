@@ -114,3 +114,5 @@ function _M.log(conf, ctx)
         end
     end
 end
+
+return _M
