@@ -9,6 +9,7 @@
 --- DateTime: 2020-07-07 16:42
 ---
 local core = require("apisix.core")
+local ipmatcher = require("resty.ipmatcher")
 local plugin_name = "cc-defend"
 
 local schema = {
@@ -29,6 +30,11 @@ local schema = {
         },
         rejected_code = {type = "integer", minimum = 200, maximum = 600,
                          default = 503},
+        whitelist = {
+            type = "array",
+            items = {type = "string", anyOf = core.schema.ip_def},
+            minItems = 0
+        },
     },
     additionalProperties = false,
     required = {"count", "time_window", "key"},
@@ -49,11 +55,31 @@ function _M.check_schema(conf)
     return true
 end
 
+local function create_ip_matcher(ip_list)
+    local ip, err = ipmatcher.new(ip_list)
+    if not ip then
+        core.log.error("failed to create ip matcher: ", err,
+                " ip list: ", core.json.delay_encode(ip_list))
+        return nil
+    end
+
+    return ip
+end
+
 function _M.access(conf, ctx)
     if conf.switch ~= "on" then
         return
     end
-    local key = (ctx.var[conf.key] or "") .. ctx.conf_type .. ctx.conf_version
+
+    local ip = ctx.var[conf.key] or ""
+    local ip_matcher = create_ip_matcher(conf.whitelist)
+    if ip_matcher then
+        local ok = ip_matcher:match(ip)
+        if ok == true then
+            return
+        end
+    end
+    local key = ip .. ctx.conf_type .. ctx.conf_version
     core.log.info("limit key: ", key)
 
     local ngx_shared_dict_name = "plugin-"..plugin_name
@@ -67,7 +93,7 @@ function _M.access(conf, ctx)
             local _log = {}
             _log.attackField = "ip"
             _log.attackRule = "cc"
-            _log.attackContent = ctx.var[conf.key]
+            _log.attackContent = ip
             _log.attackAction = "deny"
             _log.rulesId = "30100000"
             table.insert(ctx.waf_log, _log)
@@ -86,7 +112,7 @@ function _M.access(conf, ctx)
                     local _log = {}
                     _log.attackField = "ip"
                     _log.attackRule = "cc"
-                    _log.attackContent = ctx.var[conf.key]
+                    _log.attackContent = ip
                     _log.attackAction = "deny"
                     _log.rulesId = "30100000"
                     table.insert(ctx.waf_log, _log)
@@ -105,7 +131,17 @@ function _M.log(conf, ctx)
     if conf.switch ~= "on" then
         return
     end
-    local key = (ctx.var[conf.key] or "") .. ctx.conf_type .. ctx.conf_version
+
+    local ip = ctx.var[conf.key] or ""
+    local ip_matcher = create_ip_matcher(conf.whitelist)
+    if ip_matcher then
+        local ok = ip_matcher:match(ip)
+        if ok == true then
+            return
+        end
+    end
+
+    local key = ip .. ctx.conf_type .. ctx.conf_version
     core.log.error("limit key: ", key)
 
     local ngx_shared_dict_name = "plugin-"..plugin_name
