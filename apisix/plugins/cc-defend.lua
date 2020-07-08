@@ -59,8 +59,6 @@ function _M.access(conf, ctx)
     local ngx_shared_dict_name = "plugin-"..plugin_name
     local limit = ngx.shared[ngx_shared_dict_name]
 
-    local req= limit:get(key)
-
     local black_flag = limit:get(key .. "black")
     if (black_flag ~= nil) then
         local log_flag = limit:get(key .. "log")
@@ -79,6 +77,7 @@ function _M.access(conf, ctx)
         core.log.error("The number of visits exceeded the limit per unit time")
         return conf.rejected_code
     else
+        local req= limit:get(key)
         if req then
             if req > conf.count then
                 local log_flag = limit:get(key .. "log")
