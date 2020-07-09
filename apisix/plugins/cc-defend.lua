@@ -3,6 +3,8 @@
 --- Created by dingweiqiang.
 --- DateTime: 2020-07-08 15:02
 ---
+
+local ngx = ngx
 local core = require("apisix.core")
 local ipmatcher = require("resty.ipmatcher")
 local plugin_name = "cc-defend"
@@ -73,6 +75,7 @@ function _M.access(conf, ctx)
             return
         end
     end
+
     local key = ip .. ctx.conf_type .. ctx.conf_version
     core.log.info("limit key: ", key)
 
@@ -100,6 +103,7 @@ function _M.access(conf, ctx)
     else
         local req= limit:get(key)
         if req then
+            limit:incr(key, 1)
             if req > conf.count then
                 local log_flag = limit:get(key .. "log")
                 if (log_flag == nil) then
@@ -119,35 +123,6 @@ function _M.access(conf, ctx)
                 core.log.error("The number of visits exceeded the limit per unit time")
                 return conf.rejected_code
             end
-        end
-    end
-end
-
-function _M.log(conf, ctx)
-    if conf.switch ~= "on" then
-        return
-    end
-
-    local ip = ctx.var[conf.key] or ""
-    local ip_matcher = create_ip_matcher(conf.whitelist or {})
-    if ip_matcher then
-        local ok = ip_matcher:match(ip)
-        if ok == true then
-            return
-        end
-    end
-
-    local key = ip .. ctx.conf_type .. ctx.conf_version
-    core.log.error("limit key: ", key)
-
-    local ngx_shared_dict_name = "plugin-"..plugin_name
-    local limit = ngx.shared[ngx_shared_dict_name]
-    local req = limit:get(key)
-
-    local black_flag = limit:get(key .. "black")
-    if (black_flag == nil) then
-        if req then
-            limit:incr(key, 1)
         else
             limit:set(key, 1, conf.time_window)
         end
