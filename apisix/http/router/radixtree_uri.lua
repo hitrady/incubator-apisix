@@ -128,7 +128,7 @@ end
 
 function _M.init_worker(filter)
     local err
-    user_routes, err = core.config.new("/routes", {
+    user_routes, err = core.config.new("/routes",  {
             automatic = true,
             item_schema = core.schema.route,
             filter = filter,
